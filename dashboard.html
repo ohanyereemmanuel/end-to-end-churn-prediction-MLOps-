@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Churn Predictor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 32px 16px; }
+    .container { max-width: 860px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 40px; }
+    header h1 { font-size: 32px; font-weight: 700; color: #a78bfa; margin-bottom: 8px; }
+    header p { color: #718096; font-size: 15px; }
+    .card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 16px; padding: 28px; margin-bottom: 24px; }
+    .card h2 { font-size: 13px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #2d3748; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; font-weight: 500; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; }
+    input, select { background: #0f1117; border: 1px solid #2d3748; border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 14px; outline: none; width: 100%; }
+    input:focus, select:focus { border-color: #a78bfa; }
+    select option { background: #1a1d2e; }
+    .btn { width: 100%; padding: 16px; background: #a78bfa; border: none; border-radius: 12px; color: white; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px; }
+    .btn:hover { background: #9061f9; }
+    .btn:disabled { background: #4a5568; cursor: not-allowed; }
+    .risk-box { border-radius: 12px; padding: 28px; text-align: center; margin-bottom: 20px; }
+    .HIGH   { background: rgba(245,101,101,0.15); border: 1px solid rgba(245,101,101,0.5); }
+    .MEDIUM { background: rgba(236,201,75,0.15);  border: 1px solid rgba(236,201,75,0.5); }
+    .LOW    { background: rgba(72,187,120,0.15);  border: 1px solid rgba(72,187,120,0.5); }
+    .risk-label { font-size: 12px; font-weight: 700; letter-spacing: 0.15em; margin-bottom: 8px; }
+    .HIGH .risk-label { color: #fc8181; }
+    .MEDIUM .risk-label { color: #f6e05e; }
+    .LOW .risk-label { color: #68d391; }
+    .risk-pct { font-size: 64px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+    .HIGH .risk-pct { color: #fc8181; }
+    .MEDIUM .risk-pct { color: #f6e05e; }
+    .LOW .risk-pct { color: #68d391; }
+    .risk-sub { font-size: 14px; color: #718096; }
+    .bar-wrap { height: 8px; background: #0f1117; border-radius: 999px; margin: 16px 0 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
+    .HIGH .bar-fill { background: #fc8181; }
+    .MEDIUM .bar-fill { background: #f6e05e; }
+    .LOW .bar-fill { background: #68d391; }
+    .shap-section h3 { font-size: 13px; font-weight: 600; color: #a0aec0; margin-bottom: 14px; }
+    .shap-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .shap-name { font-size: 12px; color: #a0aec0; width: 180px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .shap-bar-wrap { flex: 1; background: #0f1117; border-radius: 4px; height: 20px; }
+    .shap-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: white; min-width: 50px; transition: width 0.8s ease; }
+    .shap-pos { background: rgba(245,101,101,0.8); }
+    .shap-neg { background: rgba(72,187,120,0.8); }
+    .error-msg { background: rgba(245,101,101,0.1); border: 1px solid rgba(245,101,101,0.3); border-radius: 10px; padding: 14px; color: #fc8181; font-size: 13px; margin-top: 16px; display: none; }
+    .api-note { text-align: center; font-size: 11px; color: #4a5568; margin-top: 10px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔁 Churn Risk Predictor</h1>
+    <p>Enter customer details to predict churn probability using my trained XGBoost model</p>
+  </header>
+
+  <div class="card">
+    <h2>Customer Details</h2>
+    <div class="grid">
+      <div class="field"><label>Tenure (months)</label><input type="number" id="tenure" value="3" min="0" max="72"/></div>
+      <div class="field"><label>Monthly Charges ($)</label><input type="number" id="monthlycharges" value="85.50" step="0.01"/></div>
+      <div class="field"><label>Total Charges ($)</label><input type="number" id="totalcharges" value="256.50" step="0.01"/></div>
+      <div class="field"><label>Contract Type</label>
+        <select id="contract">
+          <option value="Month-to-month" selected>Month-to-month</option>
+          <option value="One year">One year</option>
+          <option value="Two year">Two year</option>
+        </select>
+      </div>
+      <div class="field"><label>Internet Service</label>
+        <select id="internetservice">
+          <option value="Fiber optic" selected>Fiber optic</option>
+          <option value="DSL">DSL</option>
+          <option value="No">No internet</option>
+        </select>
+      </div>
+      <div class="field"><label>Tech Support</label>
+        <select id="techsupport">
+          <option value="No" selected>No</option>
+          <option value="Yes">Yes</option>
+          <option value="No internet service">No internet service</option>
+        </select>
+      </div>
+      <div class="field"><label>Online Security</label>
+        <select id="onlinesecurity">
+          <option value="No" selected>No</option>
+          <option value="Yes">Yes</option>
+          <option value="No internet service">No internet service</option>
+        </select>
+      </div>
+      <div class="field"><label>Payment Method</label>
+        <select id="paymentmethod">
+          <option value="Electronic check" selected>Electronic check</option>
+          <option value="Mailed check">Mailed check</option>
+          <option value="Bank transfer (automatic)">Bank transfer</option>
+          <option value="Credit card (automatic)">Credit card</option>
+        </select>
+      </div>
+      <div class="field"><label>Partner</label>
+        <select id="partner"><option value="No" selected>No</option><option value="Yes">Yes</option></select>
+      </div>
+      <div class="field"><label>Senior Citizen</label>
+        <select id="seniorcitizen"><option value="No" selected>No</option><option value="Yes">Yes</option></select>
+      </div>
+    </div>
+    <button class="btn" id="predictBtn" onclick="runPredict()">⚡ Predict Churn Risk</button>
+    <div class="error-msg" id="errorMsg"></div>
+    <p class="api-note">Connecting to your local FastAPI at http://127.0.0.1:8000</p>
+  </div>
+
+  <div id="loadingDiv" class="card" style="display:none">
+    <p style="text-align:center;color:#718096;padding:20px">⏳ Running your XGBoost model...</p>
+  </div>
+
+  <div id="result" class="card" style="display:none">
+    <h2>Prediction Result</h2>
+    <div class="risk-box" id="riskBox">
+      <div class="risk-label" id="riskLabel"></div>
+      <div class="risk-pct"   id="riskPct"></div>
+      <div class="risk-sub">churn probability</div>
+      <div class="bar-wrap"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    </div>
+    <div class="shap-section">
+      <h3>Top factors driving this prediction</h3>
+      <div id="shapRows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function runPredict() {
+  const btn      = document.getElementById('predictBtn');
+  const loading  = document.getElementById('loadingDiv');
+  const result   = document.getElementById('result');
+  const errorMsg = document.getElementById('errorMsg');
+
+  btn.disabled          = true;
+  btn.textContent       = 'Predicting...';
+  loading.style.display = 'block';
+  result.style.display  = 'none';
+  errorMsg.style.display = 'none';
+
+  const payload = {
+    tenure:           parseInt(document.getElementById('tenure').value) || 0,
+    monthlycharges:   parseFloat(document.getElementById('monthlycharges').value) || 0,
+    totalcharges:     parseFloat(document.getElementById('totalcharges').value) || 0,
+    contract:         document.getElementById('contract').value,
+    internetservice:  document.getElementById('internetservice').value,
+    techsupport:      document.getElementById('techsupport').value,
+    onlinesecurity:   document.getElementById('onlinesecurity').value,
+    paymentmethod:    document.getElementById('paymentmethod').value,
+    partner:          document.getElementById('partner').value,
+    seniorcitizen:    document.getElementById('seniorcitizen').value,
+    gender: "Male", dependents: "No", phoneservice: "Yes",
+    multiplelines: "No", onlinebackup: "No", deviceprotection: "No",
+    streamingtv: "No", streamingmovies: "No", paperlessbilling: "Yes"
+  };
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Server error ' + response.status);
+    }
+
+    showResult(data);
+
+  } catch (err) {
+    errorMsg.textContent   = '❌ ' + err.message;
+    errorMsg.style.display = 'block';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '⚡ Predict Churn Risk';
+    loading.style.display = 'none';
+  }
+}
+
+function showResult(data) {
+  const tier = data.risk_tier;
+  const pct  = Math.round(data.churn_probability * 100);
+
+  const riskBox = document.getElementById('riskBox');
+  riskBox.className = 'risk-box ' + tier;
+  document.getElementById('riskLabel').textContent = tier + ' RISK';
+  document.getElementById('riskPct').textContent   = pct + '%';
+
+  const barFill = document.getElementById('barFill');
+  barFill.style.width = '0%';
+  setTimeout(() => { barFill.style.width = pct + '%'; }, 100);
+
+  const shapRows  = document.getElementById('shapRows');
+  shapRows.innerHTML = '';
+  const maxImpact = Math.max(...data.top_shap_factors.map(f => Math.abs(f.impact)));
+
+  data.top_shap_factors.forEach(f => {
+    const isPos = f.impact > 0;
+    const width = Math.round((Math.abs(f.impact) / maxImpact) * 100);
+    shapRows.innerHTML += `
+      <div class="shap-row">
+        <div class="shap-name" title="${f.feature}">${f.feature}</div>
+        <div class="shap-bar-wrap">
+          <div class="shap-bar ${isPos ? 'shap-pos' : 'shap-neg'}" style="width:${Math.max(width,15)}%">
+            ${isPos ? '+' : ''}${f.impact.toFixed(3)}
+          </div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

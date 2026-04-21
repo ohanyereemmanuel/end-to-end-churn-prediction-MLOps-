@@ -1,0 +1,31 @@
+# Data
+data/raw/
+data/processed/
+
+# Models
+models/
+
+# MLflow
+mlruns/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Notebooks
+*.ipynb_checkpoints/
+
+# Reports
+reports/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.pem

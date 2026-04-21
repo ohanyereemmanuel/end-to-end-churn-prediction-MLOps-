@@ -1,0 +1,23 @@
+data:
+  raw_path: "data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+  processed_dir: "data/processed"
+
+model:
+  output_dir: "models"
+  name: "churn_model.pkl"
+
+training:
+  random_state: 42
+  test_size: 0.20
+  val_size: 0.10
+  smote: true
+  optuna_trials: 50
+
+mlflow:
+  experiment_name: "churn-prediction"
+  tracking_uri: "mlruns"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  churn_threshold: 0.5
