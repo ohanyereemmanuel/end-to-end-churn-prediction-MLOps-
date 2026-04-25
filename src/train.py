@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 
+
 # This line fixes the "no module named features" error on Windows
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -17,6 +18,12 @@ from imblearn.over_sampling import SMOTE
 
 from features import build_preprocessor
 
+import mlflow
+import mlflow.sklearn
+import optuna
+
+# Add this line right here
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
 os.environ["GIT_PYTHON_REFRESH"] = "quiet"
 
 logging.basicConfig(

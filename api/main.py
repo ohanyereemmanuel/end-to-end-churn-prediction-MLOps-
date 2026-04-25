@@ -36,9 +36,25 @@ feature_names = None
 def load_model():
     global preprocessor, clf, expected_cols, feature_names
 
-    preprocessor  = joblib.load(MODEL_DIR / "preprocessor.pkl")
-    clf           = joblib.load(MODEL_DIR / "churn_model.pkl")
-
+    try:
+        from huggingface_hub import hf_hub_download
+        print("Downloading from HuggingFace...")
+        prep_path = hf_hub_download(
+            repo_id="DocStrange/churn-prediction",
+            filename="preprocessor.pkl"
+        )
+        clf_path = hf_hub_download(
+            repo_id="DocStrange/churn-prediction",
+            filename="churn_model.pkl"
+        )
+        preprocessor = joblib.load(prep_path)
+        clf          = joblib.load(clf_path)
+        print("✅ Models loaded from HuggingFace!")
+    except Exception as e:
+        print(f"HuggingFace failed ({e}), loading local files...")
+        preprocessor = joblib.load(MODEL_DIR / "preprocessor.pkl")
+        clf          = joblib.load(MODEL_DIR / "churn_model.pkl")
+        print("✅ Models loaded from local files!")
     # Get expected input columns from training data
     X_train       = pd.read_csv(DATA_DIR / "X_train.csv")
     expected_cols = list(X_train.columns)
@@ -164,3 +180,5 @@ def predict(customer: CustomerFeatures):
         risk_tier         = get_risk_tier(prob),
         top_shap_factors  = factors,
     )
+
+    
