@@ -13,3 +13,4 @@ pydantic
 joblib
 pyyaml
 pytest
+huggingface_hub
