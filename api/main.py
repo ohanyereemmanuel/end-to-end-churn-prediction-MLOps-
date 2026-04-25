@@ -56,7 +56,8 @@ def load_model():
         clf          = joblib.load(MODEL_DIR / "churn_model.pkl")
         print("✅ Models loaded from local files!")
     # Get expected input columns from training data
-    X_train       = pd.read_csv(DATA_DIR / "X_train.csv")
+    x_train_path = hf_hub_download(repo_id="DocStrange/churn-prediction", filename="X_train.csv")
+    X_train = pd.read_csv(x_train_path)
     expected_cols = list(X_train.columns)
     print(f"Input columns ({len(expected_cols)}): {expected_cols[:4]}...")
 
